@@ -1,4 +1,4 @@
-﻿using AzurePipelinesToGitHubActionsConverter.Core.AzurePipelines;
+using AzurePipelinesToGitHubActionsConverter.Core.AzurePipelines;
 using CasCap.Common.Extensions;
 using CasCap.Models;
 using Microsoft.TeamFoundation.Build.WebApi;
@@ -274,7 +274,9 @@ public class YamlPipelineGenerator
     private List<Step> GenSteps(Guid Id, string displayName, string semver, IDictionary<string, string> inputs, IDictionary<string, string> env,
         string condition, bool continueOnError, int timeoutInMinutes, Dictionary<string, string> parameters = null)
     {
-        var version = SemVersion.Parse(semver.Replace(".*", ".0"), SemVersionStyles.OptionalPatch).Major;
+        // Handle wildcard-only version specs (e.g., "*") by defaulting to version 0
+        var normalizedSemver = semver == "*" ? "0.0.0" : semver.Replace(".*", ".0");
+        var version = SemVersion.Parse(normalizedSemver, SemVersionStyles.OptionalPatch).Major;
         if (_taskMap.TryGetValue(Id, out var taskObjs) && taskObjs.TryGetValue((int)version, out var taskObj))
             return new List<Step>
             {
@@ -291,7 +293,7 @@ public class YamlPipelineGenerator
                 }
             };
         var template = GetOrCreateTaskGroupTemplate() ?? new Template { steps = Array.Empty<Step>() };
-        return _inlineTaskGroups ? new List<Step>(template.steps) : GetSteps(template, inputs);
+        return _inlineTaskGroups || template.taskGroup is null ? new List<Step>(template.steps) : GetSteps(template, inputs);
 
         Template GetOrCreateTaskGroupTemplate()
         {
@@ -388,6 +390,10 @@ public class YamlPipelineGenerator
 
     List<Step> GenSteps(Template template, Dictionary<string, string> inputs)
     {
+        // Guard against null taskGroup
+        if (template?.taskGroup is null)
+            return new List<Step>(template?.steps ?? Array.Empty<Step>());
+
         var filename = $"{template.taskGroup.Name.Sanitize()}-v{template.taskGroup.Version.Major}.yml";
         foreach (var key in inputs.Keys.ToList())
         {

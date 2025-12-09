@@ -1,4 +1,4 @@
-﻿using AzurePipelinesToGitHubActionsConverter.Core;
+using AzurePipelinesToGitHubActionsConverter.Core;
 using CasCap.Common.Extensions;
 using CasCap.Models;
 using CasCap.Utilities;
@@ -419,6 +419,7 @@ class GenerateCommand : CommandBase
             var azureDevOpsYAML = pipeline.ToString();
             var filename = $"{Name.Sanitize()}-{Id}.yml";
             var azureDevOpsDefPath = Path.Combine(azureDevOpsPath, filename);
+            Directory.CreateDirectory(Path.GetDirectoryName(azureDevOpsDefPath)!);
             await File.WriteAllTextAsync(azureDevOpsDefPath, azureDevOpsYAML);
             count++;
             if (gitHubActions)
@@ -428,6 +429,7 @@ class GenerateCommand : CommandBase
                     if (gitHubYAML is not null && !string.IsNullOrWhiteSpace(gitHubYAML.actionsYaml))
                     {
                         var gitHubDefPath = Path.Combine(gitHubPath, filename);
+                        Directory.CreateDirectory(Path.GetDirectoryName(gitHubDefPath)!);
                         File.WriteAllText(gitHubDefPath, gitHubYAML.actionsYaml);
                         count++;
                     }
@@ -454,6 +456,7 @@ class GenerateCommand : CommandBase
                 var template = kvp.Value;
                 var filename = $"{template.taskGroup.Name.Sanitize()}-v{kvp.Key.version}.yml";
                 var azureDevOpsTaskGroupPath = Path.Combine(azureDevOpsDefPath, filename);
+                Directory.CreateDirectory(Path.GetDirectoryName(azureDevOpsTaskGroupPath)!);
                 File.WriteAllText(azureDevOpsTaskGroupPath, template.ToString());
                 Interlocked.Increment(ref fileCounter);
             }
